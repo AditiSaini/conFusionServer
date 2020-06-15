@@ -11,7 +11,6 @@ var promoRouter = require("./routes/promoRouter");
 var leaderRouter = require("./routes/leaderRouter");
 
 const mongoose = require("mongoose");
-const Dishes = require("./models/dishes");
 
 //Connecting to the mongodb server
 const url = "mongodb://localhost:27017/conFusion";
@@ -34,6 +33,42 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+//user has to be authenticated before the server content can be accessed
+
+function auth(req, res, next) {
+  console.log(req.header);
+
+  var authHeader = req.headers.authorization;
+  //username or password is null
+  if (!authHeader) {
+    var err = new Error("You are not authenticated");
+    res.setHeader("WWW-Authenticate", "Basic");
+    err.status = 401;
+    //skip over all rest and go to the error handler that constructs the reply message to be sent to the client
+    return next(err);
+  }
+
+  //Basic username:password in base 64
+  //gets the rest of the base64 encoded string containing username and password
+  var auth = new Buffer(authHeader.split(" ")[1], "base64")
+    .toString()
+    .split(":");
+  var username = auth[0];
+  var password = auth[1];
+
+  if (username === "admin" && password === "password") {
+    //from the auth, request passes on to the next set of middleware that services the request
+    next();
+  } else {
+    var err = new Error("You are not authenticated");
+    res.setHeader("WWW-Authenticate", "Basic");
+    err.status = 401;
+    return next(err);
+  }
+}
+app.use(auth);
+
+//allows to serve static data to be displayed from public and we want to do authentication before any kind of data is accessed
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/", indexRouter);
