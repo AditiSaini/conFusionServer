@@ -32,38 +32,55 @@ app.set("view engine", "jade");
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+//we will be using signed cookies
+app.use(cookieParser("12345-67890-09876-54321"));
+//check if cookie setup -> no -> authenticate -> set cookie -> check if cookie is user admin -> allow request
+
+//Now auth will be modified to use cookies instead of using auth header
 //user has to be authenticated before the server content can be accessed
-
 function auth(req, res, next) {
-  console.log(req.header);
-
-  var authHeader = req.headers.authorization;
-  //username or password is null
-  if (!authHeader) {
-    var err = new Error("You are not authenticated");
-    res.setHeader("WWW-Authenticate", "Basic");
-    err.status = 401;
-    //skip over all rest and go to the error handler that constructs the reply message to be sent to the client
-    return next(err);
-  }
-
-  //Basic username:password in base 64
-  //gets the rest of the base64 encoded string containing username and password
-  var auth = new Buffer(authHeader.split(" ")[1], "base64")
-    .toString()
-    .split(":");
-  var username = auth[0];
-  var password = auth[1];
-
-  if (username === "admin" && password === "password") {
-    //from the auth, request passes on to the next set of middleware that services the request
-    next();
+  // prev: console.log(req.header);
+  console.log(req.signedCookies);
+  //user is a property in signed cookies
+  //if no user means, user has to authenticate himself
+  if (!req.signedCookies.user) {
+    var authHeader = req.headers.authorization;
+    //username or password is null
+    if (!authHeader) {
+      var err = new Error("You are not authenticated");
+      res.setHeader("WWW-Authenticate", "Basic");
+      err.status = 401;
+      //skip over all rest and go to the error handler that constructs the reply message to be sent to the client
+      return next(err);
+    }
+    //Basic username:password in base 64
+    //gets the rest of the base64 encoded string containing username and password
+    var auth = new Buffer.from(authHeader.split(" ")[1], "base64")
+      .toString()
+      .split(":");
+    var username = auth[0];
+    var password = auth[1];
+    if (username === "admin" && password === "password") {
+      //set up the cookie here with name user in the outgoing response message so that the next incoming requests have the cookie
+      //That's why we were checking at user property earlier with value admin
+      res.cookie("user", "admin", { signed: true });
+      //from the auth, request passes on to the next set of middleware that services the request
+      next();
+    } else {
+      var err = new Error("You are not authenticated");
+      res.setHeader("WWW-Authenticate", "Basic");
+      err.status = 401;
+      return next(err);
+    }
   } else {
-    var err = new Error("You are not authenticated");
-    res.setHeader("WWW-Authenticate", "Basic");
-    err.status = 401;
-    return next(err);
+    if (req.signedCookies.user === "admin") {
+      //allows request to pass through
+      next();
+    } else {
+      var err = new Error("You are not authenticated!");
+      err.status = 401;
+      return next(err);
+    }
   }
 }
 app.use(auth);
