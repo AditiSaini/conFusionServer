@@ -3,6 +3,8 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var logger = require("morgan");
+var session = require("express-session");
+var FileStore = require("session-file-store")(session);
 
 var indexRouter = require("./routes/index");
 var usersRouter = require("./routes/users");
@@ -33,17 +35,32 @@ app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //we will be using signed cookies
-app.use(cookieParser("12345-67890-09876-54321"));
+// app.use(cookieParser("12345-67890-09876-54321"));
 //check if cookie setup -> no -> authenticate -> set cookie -> check if cookie is user admin -> allow request
+
+//we will be using session instead of a cookie parser
+app.use(
+  session({
+    name: "session-id",
+    secret: "12345-67890-09876-54321",
+    saveUninitialized: false,
+    resave: false,
+    store: new FileStore()
+  })
+);
+//gives -> req.session
 
 //Now auth will be modified to use cookies instead of using auth header
 //user has to be authenticated before the server content can be accessed
 function auth(req, res, next) {
   // prev: console.log(req.header);
-  console.log(req.signedCookies);
+  // prev1: console.log(req.signedCookies);
+  console.log(req.session);
+
   //user is a property in signed cookies
   //if no user means, user has to authenticate himself
-  if (!req.signedCookies.user) {
+  //prev: if (!req.signedCookies.user) {
+  if (!req.session.user) {
     var authHeader = req.headers.authorization;
     //username or password is null
     if (!authHeader) {
@@ -63,7 +80,8 @@ function auth(req, res, next) {
     if (username === "admin" && password === "password") {
       //set up the cookie here with name user in the outgoing response message so that the next incoming requests have the cookie
       //That's why we were checking at user property earlier with value admin
-      res.cookie("user", "admin", { signed: true });
+      //prev: res.cookie("user", "admin", { signed: true });
+      req.session.user = "admin";
       //from the auth, request passes on to the next set of middleware that services the request
       next();
     } else {
@@ -73,7 +91,8 @@ function auth(req, res, next) {
       return next(err);
     }
   } else {
-    if (req.signedCookies.user === "admin") {
+    //prev: if (req.signedCookies.user === "admin") {
+    if (req.session.user === "admin") {
       //allows request to pass through
       next();
     } else {
