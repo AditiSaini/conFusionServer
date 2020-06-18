@@ -50,6 +50,10 @@ app.use(
 );
 //gives -> req.session
 
+//so that an incoming user can access these resources before they are authenticated
+app.use("/", indexRouter);
+app.use("/users", usersRouter);
+
 //Now auth will be modified to use cookies instead of using auth header
 //user has to be authenticated before the server content can be accessed
 function auth(req, res, next) {
@@ -61,43 +65,17 @@ function auth(req, res, next) {
   //if no user means, user has to authenticate himself
   //prev: if (!req.signedCookies.user) {
   if (!req.session.user) {
-    var authHeader = req.headers.authorization;
-    //username or password is null
-    if (!authHeader) {
-      var err = new Error("You are not authenticated");
-      res.setHeader("WWW-Authenticate", "Basic");
-      err.status = 401;
-      //skip over all rest and go to the error handler that constructs the reply message to be sent to the client
-      return next(err);
-    }
-    //Basic username:password in base 64
-    //gets the rest of the base64 encoded string containing username and password
-    var auth = new Buffer.from(authHeader.split(" ")[1], "base64")
-      .toString()
-      .split(":");
-    var username = auth[0];
-    var password = auth[1];
-    if (username === "admin" && password === "password") {
-      //set up the cookie here with name user in the outgoing response message so that the next incoming requests have the cookie
-      //That's why we were checking at user property earlier with value admin
-      //prev: res.cookie("user", "admin", { signed: true });
-      req.session.user = "admin";
-      //from the auth, request passes on to the next set of middleware that services the request
-      next();
-    } else {
-      var err = new Error("You are not authenticated");
-      res.setHeader("WWW-Authenticate", "Basic");
-      err.status = 401;
-      return next(err);
-    }
+    var err = new Error("You are not authenticated!");
+    err.status = 401;
+    return next(err);
   } else {
     //prev: if (req.signedCookies.user === "admin") {
-    if (req.session.user === "admin") {
+    if (req.session.user === "authenticated") {
       //allows request to pass through
       next();
     } else {
       var err = new Error("You are not authenticated!");
-      err.status = 401;
+      err.status = 403;
       return next(err);
     }
   }
@@ -107,8 +85,7 @@ app.use(auth);
 //allows to serve static data to be displayed from public and we want to do authentication before any kind of data is accessed
 app.use(express.static(path.join(__dirname, "public")));
 
-app.use("/", indexRouter);
-app.use("/users", usersRouter);
+//protected resources only when you sign in
 app.use("/dishes", dishRouter);
 app.use("/promotions", promoRouter);
 app.use("/leaders", leaderRouter);
