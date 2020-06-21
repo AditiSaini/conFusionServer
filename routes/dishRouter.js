@@ -16,6 +16,8 @@ dishRouter
     //req and res passed on to this function (because of next) with modified res object
     //Aim: return all dishes from the model to the client
     Dishes.find({})
+      //populate author field from the user document (user.js)
+      .populate("comments.author")
       .then(
         dishes => {
           res.statusCode = 200;
@@ -66,6 +68,7 @@ dishRouter
   .route("/:dishId")
   .get((req, res, next) => {
     Dishes.findById(req.params.dishId)
+      .populate("comments.author")
       .then(
         dishes => {
           res.statusCode = 200;
@@ -119,6 +122,7 @@ dishRouter
   .route("/:dishId/comments")
   .get((req, res, next) => {
     Dishes.findById(req.params.dishId)
+      .populate("comments.author")
       .then(
         dish => {
           if (dish != null) {
@@ -135,20 +139,30 @@ dishRouter
       )
       .catch(err => next(err));
   })
+  //verifyUser populates req.user in the body
   .post(authenticate.verifyUser, (req, res, next) => {
     //take dish id, return dish and  get the comment from the body to add it to the dish
     Dishes.findById(req.params.dishId)
       .then(
         dish => {
           if (dish != null) {
+            //body contains the comment field but author wont be there anymore
+            //depending on which user we can populate the id for author field
+            req.body.author = req.user._id;
+            //body contains only raiting and comment
+            //purpose of automatically loading user data is to retrieve the value from the server side
             dish.comments.push(req.body);
             dish.save().then(
               dish => {
-                //if the dish gets saved
-                res.statusCode = 200;
-                res.setHeader("Content-Type", "application/json");
-                //send the dish with updated comments to teh user
-                res.json(dish);
+                Dishes.findById(dish._id)
+                  .populate("comments.author")
+                  .then(dish => {
+                    //if the dish gets saved
+                    res.statusCode = 200;
+                    res.setHeader("Content-Type", "application/json");
+                    //send the dish with updated comments to teh user with populated author info
+                    res.json(dish);
+                  });
               },
               err => next(err)
             );
@@ -203,6 +217,7 @@ dishRouter
   .route("/:dishId/comments/:commentId")
   .get((req, res, next) => {
     Dishes.findById(req.params.dishId)
+      .populate("comments.author")
       .then(
         dish => {
           //3 conds
@@ -248,9 +263,14 @@ dishRouter
             }
             dish.save().then(
               dish => {
-                res.statusCode = 200;
-                res.setHeader("Content-Type", "application/json");
-                res.json(dish);
+                Dishes.findById(dish._id)
+                  //populate with author info
+                  .populate("comments.author")
+                  .then(dish => {
+                    res.statusCode = 200;
+                    res.setHeader("Content-Type", "application/json");
+                    res.json(dish);
+                  });
               },
               err => next(err)
             );
@@ -276,9 +296,15 @@ dishRouter
             dish.comments.id(req.params.commentId).remove();
             dish.save().then(
               dish => {
-                res.statusCode = 200;
-                res.setHeader("Content-Type", "application/json");
-                res.json(dish);
+                Dishes.findById(dish._id)
+                  .populate("comments.author")
+                  .then(dish => {
+                    //if the dish gets saved
+                    res.statusCode = 200;
+                    res.setHeader("Content-Type", "application/json");
+                    //send the dish with updated comments to teh user with populated author info
+                    res.json(dish);
+                  });
               },
               err => next(err)
             );
