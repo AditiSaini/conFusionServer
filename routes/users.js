@@ -2,6 +2,7 @@ var express = require("express");
 const bodyParser = require("body-parser");
 var User = require("../models/user");
 var passport = require("passport");
+var authenticate = require("../authenticate");
 
 var router = express.Router();
 router.use(bodyParser.json());
@@ -35,10 +36,18 @@ router.post("/signup", (req, res, next) => {
 
 //username and password is expected to be in the body of the post message
 //when router post comes in router endpoint, then we call passport authenticate, if successful follows to the next callback else sends a failure message to the client
+//passport.auth(local) adds user property to request
 router.post("/login", passport.authenticate("local"), (req, res) => {
+  //getToken is from the authenticate.js file and payload of user id is passed
+  var token = authenticate.getToken({ _id: req.user._id });
   res.statusCode = 200;
   res.setHeader("Content-Type", "application/json");
-  res.json({ success: true, status: "You are successfully logged in!" });
+  //token gets added to the returned json
+  res.json({
+    success: true,
+    token: token,
+    status: "You are successfully logged in!"
+  });
 });
 //automatically adds user property to the request message which is serialized into the session
 
