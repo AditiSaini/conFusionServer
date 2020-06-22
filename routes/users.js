@@ -8,12 +8,26 @@ var router = express.Router();
 router.use(bodyParser.json());
 
 /* GET users listing. */
-router.get("/", function(req, res, next) {
-  res.send("respond with a resource");
+router.get("/", authenticate.verifyUser, authenticate.verifyAdmin, function(
+  req,
+  res,
+  next
+) {
+  User.find({})
+    .then(
+      users => {
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.json(users);
+      },
+      err => next(err)
+    )
+    .catch(err => next(err));
 });
 
 router.post("/signup", (req, res, next) => {
   //assumption: username and password as json string in the body of the incoming post request
+  //update user info: db.users.update({"username": "admin"}, {$set: {"admin": true}})
   User.register(
     new User({ username: req.body.username }),
     req.body.password,

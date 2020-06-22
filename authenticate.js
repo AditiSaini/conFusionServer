@@ -55,3 +55,12 @@ exports.jwtPassport = passport.use(
 
 //no sessions in this case (just a token based auth)
 exports.verifyUser = passport.authenticate("jwt", { session: false });
+
+exports.verifyAdmin = (req, res, next) => {
+  if (req.user.admin === true) {
+    return next();
+  }
+  err = new Error("You are not authorised to perform this operation");
+  err.statusCode = 403;
+  return next(err);
+};
