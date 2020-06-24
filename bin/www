@@ -4,21 +4,28 @@
  * Module dependencies.
  */
 
-var app = require('../app');
-var debug = require('debug')('confusionserver:server');
-var http = require('http');
+var app = require("../app");
+var debug = require("debug")("confusionserver:server");
+var http = require("http");
+var https = require("https");
+var fs = require("fs");
 
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '3000');
-app.set('port', port);
+var port = normalizePort(process.env.PORT || "3000");
+app.set("port", port);
+//normal web server with http runs on port 80 and https runs at 443
+//https server now runs at 3443
+//http server still runs at 3000
+app.set("secPort", port + 443);
 
 /**
  * Create HTTP server.
  */
-
+//if i get a request on the http server port, the request will be directed to https port
+//request will only be served at https port
 var server = http.createServer(app);
 
 /**
@@ -26,8 +33,24 @@ var server = http.createServer(app);
  */
 
 server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+server.on("error", onError);
+server.on("listening", onListening);
+
+//javascript object
+//sync file read so its read before configuring https server
+var options = {
+  key: fs.readFileSync(__dirname + "/private.key"),
+  cert: fs.readFileSync(__dirname + "/certificate.pem")
+};
+
+var secureServer = https.createServer(options, app);
+
+secureServer.listen(app.get("secPort"), () => {
+  console.log("Server listening on port ", app.get("secPort"));
+});
+
+secureServer.on("error", onError);
+secureServer.on("listening", onListening);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -54,22 +77,20 @@ function normalizePort(val) {
  */
 
 function onError(error) {
-  if (error.syscall !== 'listen') {
+  if (error.syscall !== "listen") {
     throw error;
   }
 
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  var bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
 
   // handle specific listen errors with friendly messages
   switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
+    case "EACCES":
+      console.error(bind + " requires elevated privileges");
       process.exit(1);
       break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
+    case "EADDRINUSE":
+      console.error(bind + " is already in use");
       process.exit(1);
       break;
     default:
@@ -83,8 +104,6 @@ function onError(error) {
 
 function onListening() {
   var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  var bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
+  debug("Listening on " + bind);
 }

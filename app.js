@@ -30,6 +30,21 @@ connect
 
 var app = express();
 
+//redirect to a secure port on server from http to https
+app.all("*", (req, res, next) => {
+  //if incoming request is already secure (secure is a flag in request)
+  if (req.secure) {
+    return next();
+  } else {
+    //redirect to the secure port
+    res.redirect(
+      307,
+      "https://" + req.hostname + ":" + app.get("secPort") + req.url
+    );
+    //307: temporary redirect: resource requested has been moved to another url. The method and the body of the original request has been reused to the redirected url
+  }
+});
+
 // view engine setup
 app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "jade");
