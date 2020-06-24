@@ -14,6 +14,7 @@ var usersRouter = require("./routes/users");
 var dishRouter = require("./routes/dishRouter");
 var promoRouter = require("./routes/promoRouter");
 var leaderRouter = require("./routes/leaderRouter");
+var uploadRouter = require("./routes/uploadRouter");
 
 const mongoose = require("mongoose");
 
@@ -37,6 +38,7 @@ app.all("*", (req, res, next) => {
     return next();
   } else {
     //redirect to the secure port
+    //remove ssl cert verfication in postman to get it to work there
     res.redirect(
       307,
       "https://" + req.hostname + ":" + app.get("secPort") + req.url
@@ -70,6 +72,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/dishes", dishRouter);
 app.use("/promotions", promoRouter);
 app.use("/leaders", leaderRouter);
+app.use("/imageUpload", uploadRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
