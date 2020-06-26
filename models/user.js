@@ -12,6 +12,8 @@ var User = new Schema({
     type: String,
     default: ""
   },
+  //user with fb id wont have a password
+  facebookId: String,
   admin: {
     type: Boolean,
     default: false

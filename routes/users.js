@@ -99,4 +99,26 @@ router.get("/logout", cors.corsWithOptions, (req, res, next) => {
   }
 });
 
+//if user sends a get request to this url, then fb OAuth based authentication used
+//facebook-token strategy used in accordance with authenticate.js
+router.get(
+  "/facebook/token",
+  passport.authenticate("facebook-token"),
+  (req, res) => {
+    //after using the middleware in authenticate.js, there would have already been a user param in req object
+    if (req.user) {
+      // all subsequent access by client will need this token to access express server information
+      //fb token can be discarded now
+      var token = authenticate.getToken({ _id: req.user._id });
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      res.json({
+        success: true,
+        token: token,
+        status: "You are successfully logged in!"
+      });
+    }
+  }
+);
+
 module.exports = router;
