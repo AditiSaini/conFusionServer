@@ -99,3 +99,16 @@ exports.facebookPassport = passport.use(
     }
   )
 );
+
+//new route /favorites GET PUT POST DELETE (design schema and corresponding mongoose model)
+//mongoose population: user model and dishes model when we put fav dishes (won't cotnain user or dish information but will contain pointers)
+//POST /favorites/:dishId no body message OR body: [{_id: ""}, {_id: ""}, ..] appends to the dish array
+//user: object id of the user schema
+//dishes: [dishid added here]
+//GET: list of favorites /favorites with mogoose population
+//only user can retrieve list of favs for themselves
+//user id gets automatically added
+//DELETE: /favorites/:dishId  /favorites => deletes all your favorite dishes and return null (deletes the document itself)
+//1. favorite schema favorite.js (user id and array of dishes doc object id)
+//2. GET/POST/DELETE operations in /favorites endpoint (POST: need to create a fav doc if doesnt exist else just update and dont add duplicates (use indexOf to check), DELETE: deletes the dish)
+//3. Mount the favorite router in routes folder favoriteRouter.js
